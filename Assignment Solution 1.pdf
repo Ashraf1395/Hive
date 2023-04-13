@@ -31,6 +31,7 @@ Perform below menioned queries on "sales_order_orc" table :
 
 a. Calculatye total sales per year
 SELECT YEAR_ID,SUM(SALES) AS TOTALSALES FROM sales_order_csv GROUP BY YEAR_ID;
+
 SOLUTION
 2003    3516514
 2004    4723531
