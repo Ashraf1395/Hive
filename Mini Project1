@@ -1,0 +1,87 @@
+create database project
+use project
+
+** 
+#Creating AgentPerformance table
+create table agentperformance
+(sl int,Dates Date,Agent String,Chats int,Avg_response_time timestamp,Avg_resolution_time timestamp,Avg_rating float,Total_feedback int)
+row format delimited fields terminated by ','
+tblproperties("skip.header.line.count"="1");
+
+#Loading Data into Hadoop
+hadoop fs -put AgentPerformance.csv /user/hive
+
+#Loading Data from Hadoop into the Table
+load data inpath '/user/hive/AgentPerformance.csv into table agentperformance;
+**
+**
+#Creatiing Partition Table with Dynamic partition on Agent and Doing Bucketing on Dates
+create table agentperformance_part
+(sl int,Dates Date,Chats int,Avg_response_time timestamp,Avg_resolution_time timestamp,Avg_rating float,Total_feedback int)
+partitioned by(Agent String)
+clusted by(Dates)
+sorted by(Dates)
+into 3 buckets;
+
+set hive.exec.dynamic.partition.mode=nonstrict;
+
+insert overwrite agentperformnace_part_dynaminc_part partition(Agent) select sl,Dates,Chats,Avg_response_time,Avg_resolution_time,Avg_rating,Total_feedback
+from agentperformance;
+**
+**
+#Creating Agent loging report Table
+create table agentloging
+    > (sl int,Dates Date,Agent String,,Logout_time Timestamp,Login_time Timestamp,Duration Timestamp)
+    > row format delimited fields terminated by ','
+    > tblproperties("skip.header.line.count"="1");
+
+#Loading data into Hive
+hadoop fs -put AgentLogingReport.csv /user/hive
+
+#Loading Data from hadoop into the table
+load data inpath '/user/hive/AgentLogingReport.csv into table agentloging;
+
+3. List of all agents' names. 
+select Agent from agentperformance_part; 
+
+4. Find out agent average rating.
+select Avg_rating from agentperformance;
+
+5. Total working days for each agents 
+select Agent,count( distinct Dates) from agentloging group by Agent;
+
+6. Total query that each agent have taken 
+select Agent,count(Chats) from agentloging group by Agent;
+
+7. Total Feedback that each agent have received 
+select Agent,sum(Total_feedback) from agentperformance_part group by Agent;
+
+8. Agent name who have average rating between 3.5 to 4 
+select Agent from agentperformance_part where Avg_rating>3.5 and Avg_rating<4.5;
+
+9. Agent name who have rating less than 3.5 
+select Agent from agentperformance_part where Avg_rating<3.5 ;
+
+10. Agent name who have rating more than 4.5 
+select Agent from agentperformance_part where Avg_rating>4.5;
+
+11. How many feedback agents have received more than 4.5 average
+select sum(Total_feedback) from agentperformance_part where Avg_rating<4.5 group by Agent;
+
+12. average weekly response time for each agent
+select Agent,Avg(Avg_response_time) as Weekly_response_time from (select Agent,week(Dates) as Week,Avg_response_time from agentperformance_part) group by Week;
+
+13. average weekly resolution time for each agents 
+select Agent,Avg(Avg_resolution_time) as Weekly_resolution_time from (select Agent,week(Dates) as Week,Avg_resolution_time from agentperformance_part) group by Week;
+
+14. Find the number of chat on which they have received a feedback 
+select Count(Chats) from agentperformance_part where Total_feedback>0;
+
+15. Total contribution hour for each and every agents weekly basis 
+select Agent,sum(hours) from(select Agent,hour(Duaration)as hours,week(Dates)as Week from agentperformance) group by (Agent,Week) ;
+16. Perform inner join, left join and right join based on the agent column and after joining the table export that data into your local system.
+
+select p.Agent,p.Chats,p.Avg_rating,l.Duration from agentperformance_part p inner join agentloging l on p.Agent=l.Agent;
+
+17. Perform partitioning on top of the agent column and then on top of that perform bucketing for each partitioning.
+    
